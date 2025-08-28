@@ -6,6 +6,7 @@ from IPython.display import display, Audio, FileLink, clear_output
 import ipywidgets as widgets
 from google.colab import files
 
+
 # ==== Giao diện ====
 api_input = widgets.Textarea(value='', placeholder='Nhập các API key, mỗi dòng một key', description='🔑 API Key:', layout={'width': '100%', 'height': '100px'})
 voice_id_input = widgets.Text(value='', placeholder='Nhập Voice ID', description='🗣️ Voice ID:', layout={'width': '100%'})
@@ -95,6 +96,18 @@ def generate_subtitles(paragraphs, folder="output_audio", file="output.srt", lan
                 index += 1
     return srt_path
 
+def merge_with_pause(folder="output_audio", outname="output_audio/full.mp3", pause_ms=250):
+    segs = [f for f in sorted(os.listdir(folder)) if f.startswith("seg") and f.endswith(".mp3")]
+    combined = AudioSegment.empty()
+    silence = AudioSegment.silent(duration=pause_ms)  # khoảng ngắt
+
+    for f in segs:
+        audio = AudioSegment.from_mp3(os.path.join(folder, f))
+        combined += audio + silence  # thêm silence sau mỗi đoạn
+
+    combined.export(outname, format="mp3")
+    return outname
+    
 # ==== Xử lý chính ====
 def on_generate(b):
     clear_output()
@@ -158,7 +171,7 @@ def on_generate(b):
         for fmp3 in sorted(os.listdir("output_audio")):
             if fmp3.startswith("seg") and fmp3.endswith(".mp3"):
                 f.write(f"file '{fmp3}'\n")
-    os.system("ffmpeg -loglevel error -f concat -safe 0 -i output_audio/list.txt -c copy output_audio/full.mp3 -y")
+    merge_with_pause(folder="output_audio", outname="output_audio/full.mp3", pause_ms=random.randint(500,600))
 
     if os.path.exists("output_audio/full.mp3"):
         print("\n✅ Đã tạo file âm thanh:")
